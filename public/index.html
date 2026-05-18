@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>날인 · 서류 서명</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --paper:#f1ede3; --card:#fffefb; --ink:#23211b; --muted:#5f5b50; --faint:#938e81;
+    --line:#ddd6c6; --line-soft:#ebe6d9; --accent:#8a3324; --accent-deep:#6f271b; --accent-soft:#f3e6e1;
+    --ok:#3a6440; --ok-soft:#e4eee4; --wait:#8a5e18; --wait-soft:#f1e8d2;
+    --shadow:0 2px 4px rgba(35,33,27,.05),0 14px 36px -14px rgba(35,33,27,.22);
+    --shadow-sm:0 1px 3px rgba(35,33,27,.06),0 6px 18px -10px rgba(35,33,27,.16);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:'IBM Plex Sans KR',sans-serif;background:var(--paper);color:var(--ink);
+    -webkit-font-smoothing:antialiased;line-height:1.65;font-size:18px;
+    background-image:radial-gradient(circle at 10% 6%,rgba(138,51,36,.05),transparent 40%),
+                     radial-gradient(circle at 92% 96%,rgba(35,33,27,.05),transparent 44%);
+    background-attachment:fixed;
+  }
+  ::selection{background:var(--accent);color:#fff;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;
+    border-bottom:1px solid var(--line);background:rgba(255,254,251,.9);backdrop-filter:blur(8px);
+    position:sticky;top:0;z-index:50;}
+  .brand{display:flex;align-items:center;gap:11px;cursor:pointer;}
+  .seal{width:42px;height:42px;border-radius:50%;border:1.8px solid var(--accent);display:grid;
+    place-items:center;flex-shrink:0;color:var(--accent);background:var(--accent-soft);}
+  .seal svg{width:21px;height:21px;}
+  .brand-text b{font-family:'Gowun Batang',serif;font-size:22px;letter-spacing:.04em;display:block;line-height:1.1;}
+  .brand-text span{font-size:11px;color:var(--faint);letter-spacing:.14em;text-transform:uppercase;}
+  .role-tag{font-size:13px;padding:6px 13px;border-radius:20px;border:1px solid var(--line);color:var(--muted);font-weight:600;}
+  .wrap{max-width:680px;margin:0 auto;padding:26px 18px 110px;}
+
+  button{font-family:inherit;cursor:pointer;border:none;}
+  .btn{display:inline-flex;align-items:center;gap:9px;justify-content:center;padding:16px 22px;
+    border-radius:13px;font-weight:700;font-size:18px;min-height:58px;
+    transition:transform .12s ease,background .15s ease,box-shadow .15s ease;}
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:var(--accent);color:#fff;box-shadow:0 6px 18px -8px rgba(138,51,36,.65);}
+  .btn-primary:hover{background:var(--accent-deep);}
+  .btn-ghost{background:var(--card);border:1.5px solid var(--line);color:var(--ink);}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-block{width:100%;}
+  .btn-big{font-size:20px;min-height:66px;padding:18px 24px;}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;}
+  .btn svg{flex-shrink:0;}
+
+  .hero{text-align:center;margin:14px 0 34px;}
+  .hero h1{font-family:'Gowun Batang',serif;font-size:clamp(28px,7vw,40px);font-weight:700;line-height:1.3;}
+  .hero h1 em{font-style:normal;color:var(--accent);}
+  .hero p{color:var(--muted);margin-top:14px;font-size:16px;}
+  .role-stack{display:flex;flex-direction:column;gap:16px;}
+  .role-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;
+    box-shadow:var(--shadow-sm);text-align:left;display:flex;gap:16px;align-items:center;
+    transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease;cursor:pointer;}
+  .role-card:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:var(--shadow);}
+  .role-card .ic{width:54px;height:54px;border-radius:13px;display:grid;place-items:center;flex-shrink:0;
+    background:var(--accent-soft);color:var(--accent);}
+  .role-card .ic svg{width:27px;height:27px;}
+  .role-card h3{font-family:'Gowun Batang',serif;font-size:21px;}
+  .role-card p{color:var(--muted);font-size:14px;margin-top:2px;}
+  .role-card .chev{margin-left:auto;color:var(--faint);}
+
+  .sec-head{margin-bottom:20px;}
+  .sec-head h2{font-family:'Gowun Batang',serif;font-size:25px;font-weight:700;}
+  .sec-head .sub{color:var(--muted);font-size:14px;margin-top:3px;}
+  .list-top{display:flex;align-items:center;justify-content:space-between;}
+
+  .doc-list{display:flex;flex-direction:column;gap:13px;}
+  .doc-row{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:14px 14px 14px 16px;
+    display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-sm);transition:border-color .15s ease;}
+  .doc-row:hover{border-color:var(--accent);}
+  .doc-tap{display:flex;align-items:center;gap:12px;flex:1;min-width:0;cursor:pointer;background:none;text-align:left;padding:0;}
+  .doc-tap:active{opacity:.7;}
+  .doc-ic{width:44px;height:44px;border-radius:11px;flex-shrink:0;background:var(--line-soft);
+    display:grid;place-items:center;color:var(--muted);}
+  .doc-ic svg{width:21px;height:21px;}
+  .doc-main{flex:1;min-width:0;}
+  .doc-main b{font-size:16.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .doc-main span{font-size:12.5px;color:var(--faint);}
+  .badge{font-size:12px;font-weight:700;padding:5px 10px;border-radius:20px;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:5px;flex-shrink:0;}
+  .badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;}
+  .badge-wait{background:var(--wait-soft);color:var(--wait);}
+  .badge-ok{background:var(--ok-soft);color:var(--ok);}
+  .copy-mini{width:44px;height:44px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;
+    background:var(--card);border:1.5px solid var(--line);color:var(--muted);transition:all .12s ease;}
+  .copy-mini:hover{border-color:var(--accent);color:var(--accent);}
+  .copy-mini svg{width:19px;height:19px;}
+  .empty{text-align:center;padding:54px 20px;color:var(--muted);font-size:15px;
+    border:1.5px dashed var(--line);border-radius:16px;background:rgba(255,254,251,.5);}
+  .empty svg{width:42px;height:42px;color:var(--faint);margin-bottom:12px;}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow-sm);}
+  .field{margin-bottom:18px;}
+  .field label{display:block;font-size:15px;font-weight:700;margin-bottom:8px;}
+  .field .hint{font-size:13px;color:var(--faint);font-weight:400;}
+  input[type=text],input[type=date],input[type=tel],input[type=password],textarea{
+    width:100%;font-family:inherit;font-size:17px;color:var(--ink);background:#fbfaf6;
+    border:1.5px solid var(--line);border-radius:11px;padding:14px 15px;
+    transition:border-color .15s ease,box-shadow .15s ease;}
+  input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft);}
+  .radio-group{display:flex;gap:10px;}
+  .radio-opt{flex:1;padding:14px;border:1.5px solid var(--line);border-radius:11px;background:#fbfaf6;
+    font-size:16px;font-weight:600;color:var(--muted);text-align:center;transition:all .12s ease;}
+  .radio-opt.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-deep);}
+  .form-actions{display:flex;gap:11px;margin-top:6px;}
+  .form-actions .btn{flex:1;}
+
+  /* ===== 정부 양식 ===== */
+  .paper{background:#fff;border:1px solid var(--line);border-radius:8px;padding:30px 24px;box-shadow:var(--shadow);}
+  .gov-no{text-align:right;font-size:15px;font-weight:600;margin-bottom:14px;}
+  .gov-no u{padding:0 24px;}
+  .gov-title{text-align:center;font-size:25px;font-weight:700;line-height:1.4;margin:6px 0 22px;letter-spacing:-.01em;}
+  .gov-table{width:100%;border-collapse:collapse;margin:0 0 22px;table-layout:fixed;}
+  .gov-table th,.gov-table td{border:1px solid #2c2a26;padding:9px 6px;font-size:14px;
+    text-align:center;word-break:keep-all;vertical-align:middle;line-height:1.45;}
+  .gov-table th{background:#f1ede1;font-weight:700;}
+  .gov-table td{background:#fff;}
+  .gov-table .val{font-weight:500;}
+  .gov-table .val.blank{color:#cfc9ba;}
+  .gov-body{font-size:15px;line-height:1.95;text-indent:1em;margin:6px 0 26px;color:#1f1d18;}
+  .gov-date{text-align:center;font-size:16px;font-weight:600;margin:24px 0;letter-spacing:.04em;}
+  .gov-signline{display:flex;align-items:flex-end;justify-content:center;gap:10px;
+    font-size:16px;font-weight:600;flex-wrap:wrap;margin-bottom:18px;}
+  .gov-sigslot{display:inline-flex;align-items:flex-end;justify-content:center;
+    min-width:150px;height:54px;border-bottom:1.5px solid #2c2a26;padding-bottom:2px;}
+  .gov-sigslot img{max-height:50px;max-width:150px;}
+  .gov-sigslot .pend{color:#cfc9ba;font-size:13px;font-weight:400;padding-bottom:8px;font-style:italic;}
+  .gov-foot{font-size:13px;color:#b3261e;font-style:italic;font-weight:600;text-align:center;
+    margin-top:8px;border-top:1px dashed var(--line);padding-top:14px;}
+  @media(max-width:430px){
+    .gov-title{font-size:21px;}
+    .gov-table th,.gov-table td{font-size:12.5px;padding:7px 3px;}
+    .gov-body{font-size:14px;}
+  }
+
+  .step-banner{display:flex;align-items:center;gap:12px;background:var(--accent-soft);
+    color:var(--accent-deep);border-radius:14px;padding:16px 18px;margin-bottom:20px;font-size:16px;font-weight:600;}
+  .step-banner .stepnum{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;
+    display:grid;place-items:center;font-weight:700;flex-shrink:0;font-size:16px;}
+  .scroll-hint{text-align:center;font-size:14px;color:var(--faint);margin:14px 0;
+    display:flex;align-items:center;justify-content:center;gap:7px;}
+  .scroll-hint svg{width:18px;height:18px;animation:bob 1.4s ease-in-out infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(4px);}}
+  .consent-line{font-size:15px;color:var(--muted);background:#fbfaf6;border:1.5px solid var(--line);
+    border-radius:12px;padding:14px 16px;margin:4px 0 18px;line-height:1.6;}
+
+  .pad-shell{border:2px solid var(--accent);border-radius:14px;overflow:hidden;background:#fff;}
+  .pad-canvas{display:block;width:100%;height:240px;touch-action:none;cursor:crosshair;
+    background:repeating-linear-gradient(0deg,transparent,transparent 47px,var(--line-soft) 47px,var(--line-soft) 48px);}
+  .pad-bar{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;
+    border-top:1px solid var(--line-soft);background:#fbfaf6;}
+  .pad-bar span{font-size:14px;color:var(--faint);}
+  .pad-clear{background:var(--card);border:1.5px solid var(--line);color:var(--ink);padding:9px 16px;
+    border-radius:9px;font-size:15px;font-weight:700;min-height:44px;}
+  .pad-clear:hover{border-color:var(--accent);color:var(--accent);}
+
+  .share-box{background:linear-gradient(140deg,var(--accent) 0%,var(--accent-deep) 100%);color:#fff;
+    border-radius:18px;padding:24px;margin-bottom:22px;}
+  .share-box .sb-label{font-size:13px;letter-spacing:.06em;opacity:.85;font-weight:600;}
+  .share-box .sb-title{font-family:'Gowun Batang',serif;font-size:22px;font-weight:700;margin:6px 0 4px;}
+  .share-box .sb-desc{font-size:14px;opacity:.85;line-height:1.65;margin-bottom:16px;}
+  .link-pill{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);border-radius:11px;
+    padding:13px 15px;font-size:14px;word-break:break-all;margin-bottom:12px;line-height:1.5;}
+  .share-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .share-actions .btn{flex:1;min-width:130px;background:#fff;color:var(--accent-deep);min-height:54px;}
+  .share-actions .btn.outline{background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.4);}
+
+  .notice{display:flex;gap:11px;padding:15px;border-radius:13px;font-size:15px;
+    background:var(--accent-soft);color:var(--accent-deep);margin-bottom:20px;align-items:flex-start;}
+  .notice svg{width:20px;height:20px;flex-shrink:0;margin-top:1px;}
+  .back-link{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:15px;
+    font-weight:600;background:none;margin-bottom:18px;padding:6px 2px;}
+  .back-link:hover{color:var(--accent);}
+  .back-link svg{width:17px;height:17px;}
+  .logout-link{color:var(--faint);font-size:14px;font-weight:600;background:none;padding:6px 2px;margin-bottom:18px;}
+  .logout-link:hover{color:var(--accent);}
+
+  .done-screen{text-align:center;padding:40px 16px;}
+  .done-mark{width:96px;height:96px;border-radius:50%;background:var(--ok-soft);color:var(--ok);
+    display:grid;place-items:center;margin:0 auto 24px;animation:pop .45s ease;}
+  .done-mark svg{width:48px;height:48px;}
+  @keyframes pop{0%{transform:scale(.4);opacity:0;}60%{transform:scale(1.12);}100%{transform:scale(1);opacity:1;}}
+  .done-screen h2{font-family:'Gowun Batang',serif;font-size:28px;margin-bottom:10px;}
+  .done-screen p{color:var(--muted);font-size:16px;}
+
+  .login-wrap{max-width:380px;margin:30px auto 0;text-align:center;}
+  .login-wrap .seal{width:58px;height:58px;margin:0 auto 18px;}
+  .login-wrap h2{font-family:'Gowun Batang',serif;font-size:25px;margin-bottom:6px;}
+  .login-wrap p{color:var(--muted);font-size:14px;margin-bottom:22px;}
+
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);
+    border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:18px;}
+  .meta-cell{background:var(--card);padding:14px;}
+  .meta-cell .k{font-size:12px;color:var(--faint);}
+  .meta-cell .v{font-size:16px;font-weight:700;margin-top:3px;}
+  .row-actions{display:flex;flex-direction:column;gap:11px;margin-top:22px;}
+  .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:13px 22px;border-radius:30px;font-size:15px;
+    opacity:0;transition:all .25s ease;z-index:200;pointer-events:none;box-shadow:var(--shadow);
+    max-width:90%;text-align:center;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .loading{text-align:center;padding:70px 20px;color:var(--faint);font-size:15px;}
+  .spin{width:30px;height:30px;border:3.5px solid var(--line);border-top-color:var(--accent);
+    border-radius:50%;margin:0 auto 14px;animation:rot .7s linear infinite;}
+  @keyframes rot{to{transform:rotate(360deg);}}
+  .fade-in{animation:fade .35s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  .help-row{font-size:13.5px;color:var(--faint);text-align:center;margin-top:22px;line-height:1.7;}
+  #pdf-stage{position:fixed;left:-9999px;top:0;width:794px;background:#fff;}
+  @media(max-width:420px){.wrap{padding:22px 14px 110px;}.paper{padding:24px 16px;}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand" onclick="goHome()">
+    <div class="seal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2v6m0 0l3-2m-3 2L9 6"/><circle cx="12" cy="15" r="6"/>
+      </svg>
+    </div>
+    <div class="brand-text"><b>날인</b><span>서류 서명</span></div>
+  </div>
+  <div id="topbar-right"></div>
+</div>
+
+<div class="wrap" id="app"></div>
+<div id="pdf-stage"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========================================================================
+   날인 — 양식 기반 서류 서명 시스템 (서버 연동판)
+   · 데이터는 서버에 저장됩니다. 관리자/고객이 서로 다른 기기여도 공유됩니다.
+   · 관리자 화면은 비밀번호 로그인 후 사용합니다.
+   · 고객(어르신)은 /s/서류ID 링크를 누르면 바로 서명 화면이 열립니다.
+   ===================================================================== */
+
+/* ========================================================================
+   ★ 양식 추가 방법 (개발자용)
+   TEMPLATES 에 새 항목 추가:
+     - name, desc
+     - fields[] : {key, label, type('text'|'tel'|'radio'|'date'), options}
+       ※ 기본값/placeholder/필수 없음. 날짜는 새로만들기·복사 시 오늘 자동.
+     - buildPaper(v,opt) : 입력값 v 로 실제 서류 HTML 반환
+   ===================================================================== */
+const TEMPLATES = {
+
+  /* ── 양식 1 : 융복합지원사업 소유자 사업신청서 ───────────────────── */
+  yungbokhap: {
+    name: '융복합지원사업 소유자 사업신청서',
+    desc: '태양광 등 신재생에너지 융복합지원사업 신청서',
+    fields: [
+      { key:'no',          label:'관리번호 (NO.)',     type:'text' },
+      { key:'projectName', label:'사업명',             type:'text' },
+      { key:'applicant',   label:'신청자(소유자) 성함', type:'text' },
+      { key:'organization',label:'주관기관',           type:'text' },
+      { key:'phone',       label:'전화번호',           type:'tel'  },
+      { key:'mobile',      label:'핸드폰',             type:'tel'  },
+      { key:'energy',      label:'에너지원',           type:'text' },
+      { key:'capacity',    label:'용량 및 단위',       type:'text' },
+      { key:'location',    label:'설치장소',           type:'text' },
+      { key:'building',    label:'건물구분',           type:'radio', options:['주택','건물'] },
+      { key:'cost',        label:'자부담금',           type:'text' },
+      { key:'docDate',     label:'서류 작성일 (오늘 자동 / 변경 가능)', type:'date' },
+    ],
+    buildPaper(v, opt={}){
+      const signed = opt.signed, sig = opt.signatureDataUrl;
+      const val = x => x && String(x).trim()
+        ? `<span class="val">${esc(x)}</span>`
+        : `<span class="val blank">&nbsp;</span>`;
+      const chk = name => v.building===name ? '✔' : '\u3000';
+      return `
+      <div class="paper">
+        <div class="gov-no">NO. <u>${v.no?esc(v.no):'&nbsp;'}</u></div>
+        <div class="gov-title">2027년 융복합지원사업<br>소유자 사업신청서</div>
+        <table class="gov-table">
+          <colgroup><col style="width:24%"><col style="width:26%"><col style="width:24%"><col style="width:26%"></colgroup>
+          <tr><th>사업명</th><td colspan="3">${val(v.projectName)}</td></tr>
+          <tr><th>신청자<br>(소유자)</th><td>${val(v.applicant)}</td><th>주관기관</th><td>${val(v.organization)}</td></tr>
+          <tr><th>전화번호</th><td>${val(v.phone)}</td><th>핸드폰</th><td>${val(v.mobile)}</td></tr>
+          <tr><th>에너지원</th><td>${val(v.energy)}</td><th>용량 및<br>단위</th><td>${val(v.capacity)}</td></tr>
+          <tr><th>설치장소</th><td colspan="3">${val(v.location)}</td></tr>
+          <tr><th>건물구분</th><td colspan="3">주택(&nbsp;${chk('주택')}&nbsp;)&nbsp;&nbsp;&nbsp;&nbsp;건물(&nbsp;${chk('건물')}&nbsp;)</td></tr>
+          <tr><th>자부담금</th><td colspan="3">${val(v.cost)}</td></tr>
+        </table>
+        <p class="gov-body">본인은 2027년 통영시 융복합지원사업 신청 절차·일정, 지원 가능 대상지 여부 및 사업수행 시 유의사항에 대해 컨소시엄 주관기관으로부터 모두 확인하였으며, 동의하에 본 사업 선정 시 자부담금을 납입할 것을 확약합니다.</p>
+        <p class="gov-date">${fmtKDate(v.docDate)}</p>
+        <div class="gov-signline">
+          <span>신청자(소유자) :</span>
+          <span class="gov-sigslot">
+            ${ signed && sig ? `<img src="${sig}" alt="서명" />` : `<span class="pend">서명 대기</span>` }
+          </span>
+          <span>(서명)</span>
+        </div>
+        <p class="gov-foot">※ 2개 에너지원일 경우 2장 작성, 1장에 2개 에너지원 기재 금지</p>
+      </div>`;
+    }
+  },
+
+  /* ── 양식 2 이후는 여기에 같은 형태로 추가 ────────────────────────── */
+
+};
+
+/* ===================== 서버 통신 (API) ===================== */
+const API = {
+  token: localStorage.getItem('nalin_admin_token') || null,
+  _h(){ const h={'Content-Type':'application/json'}; if(this.token) h['Authorization']='Bearer '+this.token; return h; },
+  async login(pw){
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    if(!r.ok) throw new Error('login');
+    const d=await r.json();
+    this.token=d.token; localStorage.setItem('nalin_admin_token',d.token);
+    return true;
+  },
+  logout(){ this.token=null; localStorage.removeItem('nalin_admin_token'); },
+  async list(){
+    const r=await fetch('/api/docs',{headers:this._h()});
+    if(r.status===401) throw {auth:true};
+    if(!r.ok) throw new Error('list');
+    return r.json();
+  },
+  async get(id){
+    const r=await fetch('/api/docs/'+encodeURIComponent(id));
+    if(r.status===404) return null;
+    if(!r.ok) throw new Error('get');
+    return r.json();
+  },
+  async create(templateId,values){
+    const r=await fetch('/api/docs',{method:'POST',headers:this._h(),body:JSON.stringify({templateId,values})});
+    if(r.status===401) throw {auth:true};
+    if(!r.ok) throw new Error('create');
+    return r.json();
+  },
+  async update(id,values){
+    const r=await fetch('/api/docs/'+encodeURIComponent(id),{method:'PUT',headers:this._h(),body:JSON.stringify({values})});
+    if(r.status===401) throw {auth:true};
+    if(r.status===409) throw {conflict:true};
+    if(!r.ok) throw new Error('update');
+    return r.json();
+  },
+  async remove(id){
+    const r=await fetch('/api/docs/'+encodeURIComponent(id),{method:'DELETE',headers:this._h()});
+    if(r.status===401) throw {auth:true};
+    if(!r.ok) throw new Error('remove');
+    return true;
+  },
+  async sign(id,signerName,signatureDataUrl){
+    const r=await fetch('/api/docs/'+encodeURIComponent(id)+'/sign',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({signerName,signatureDataUrl})});
+    if(r.status===409) throw {signed:true};
+    if(!r.ok) throw new Error('sign');
+    return r.json();
+  }
+};
+
+/* ---- helpers ---- */
+function todayISO(){ const d=new Date(),p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+function fmtKDate(iso){
+  if(!iso) return '____년 __월 __일';
+  const m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[1]}년 ${parseInt(m[2],10)}월 ${parseInt(m[3],10)}일` : esc(iso);
+}
+function fmtDT(ts){ if(!ts) return '-'; const d=new Date(ts),p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show');
+  clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.remove('show'),2400); }
+function signLink(id){ return location.origin+'/s/'+id; }
+function tplPaper(doc,opt){ const t=TEMPLATES[doc.templateId]; return t?t.buildPaper(doc.values||{},opt||{}):'<div class="empty">양식을 찾을 수 없습니다.</div>'; }
+function tplName(id){ return TEMPLATES[id]?TEMPLATES[id].name:'서류'; }
+const LOADING=`<div class="loading"><div class="spin"></div>불러오는 중...</div>`;
+
+/* ---- state / routing ---- */
+const app=document.getElementById('app');
+let state={view:'home'};
+let pad=null;
+
+function setTopbar(){
+  const el=document.getElementById('topbar-right');
+  if(state.view.startsWith('admin')) el.innerHTML='<span class="role-tag">관리자</span>';
+  else if(state.view.startsWith('customer')) el.innerHTML='<span class="role-tag">서명</span>';
+  else el.innerHTML='';
+}
+function go(view,opts={}){ state.view=view; Object.assign(state,opts); setTopbar(); render(); window.scrollTo({top:0,behavior:'smooth'}); }
+function goHome(){ if(state.view.startsWith('customer')) return; go('home'); }
+function enterAdmin(){ if(API.token) go('admin-list'); else go('admin-login'); }
+function onAuthFail(){ API.logout(); toast('다시 로그인해 주세요.'); go('admin-login'); }
+function adminLogout(){ API.logout(); toast('로그아웃되었습니다.'); go('home'); }
+
+function render(){
+  setTopbar();
+  switch(state.view){
+    case 'home':          return renderHome();
+    case 'admin-login':   return renderAdminLogin();
+    case 'admin-list':    return renderAdminList();
+    case 'admin-pick':    return renderAdminPick();
+    case 'admin-fill':    return renderAdminFill();
+    case 'admin-detail':  return renderAdminDetail();
+    case 'customer-doc':  return renderCustomerDoc();
+    case 'customer-done': return renderCustomerDone();
+    case 'customer-bad':  return renderCustomerBad();
+    default:              return renderHome();
+  }
+}
+
+/* ---- HOME ---- */
+function renderHome(){
+  app.innerHTML=`
+  <div class="fade-in">
+    <div class="hero">
+      <h1>서류를 보내고<br><em>서명만</em> 받으세요</h1>
+      <p>관리자가 양식을 채워 서류를 만들면 링크가 생깁니다.<br>고객은 링크를 누르기만 하면 바로 서명할 수 있습니다.</p>
+    </div>
+    <div class="role-stack">
+      <div class="role-card" onclick="enterAdmin()">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></div>
+        <div><h3>관리자로 시작</h3><p>서류를 만들고 수정·복사하고, 서명된 서류를 받습니다.</p></div>
+        <div class="chev"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      </div>
+    </div>
+    <div class="help-row">고객(어르신)은 이 화면을 볼 필요가 없습니다.<br>전달받은 링크를 누르면 곧바로 서명 화면이 열립니다.</div>
+  </div>`;
+}
+
+/* ---- ADMIN: 로그인 ---- */
+function renderAdminLogin(){
+  app.innerHTML=`
+  <div class="fade-in">
+    <button class="back-link" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>처음으로</button>
+    <div class="login-wrap">
+      <div class="seal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <h2>관리자 로그인</h2>
+      <p>관리자 비밀번호를 입력해 주세요.</p>
+      <div class="panel" style="text-align:left;">
+        <div class="field" style="margin-bottom:14px;">
+          <label>비밀번호</label>
+          <input type="password" id="login-pw" autocomplete="current-password" />
+        </div>
+        <button class="btn btn-primary btn-block" onclick="doLogin(this)">로그인</button>
+      </div>
+    </div>
+  </div>`;
+  const pw=document.getElementById('login-pw');
+  setTimeout(()=>pw.focus(),100);
+  pw.addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(document.querySelector('.login-wrap .btn')); });
+}
+async function doLogin(btn){
+  const pw=document.getElementById('login-pw').value;
+  if(!pw){ toast('비밀번호를 입력해 주세요.'); return; }
+  btn.disabled=true; btn.textContent='확인 중...';
+  try{
+    await API.login(pw);
+    go('admin-list');
+  }catch(e){
+    btn.disabled=false; btn.textContent='로그인';
+    toast('비밀번호가 올바르지 않습니다.');
+  }
+}
+
+/* ---- ADMIN: 목록 ---- */
+async function renderAdminList(){
+  app.innerHTML=LOADING;
+  let list;
+  try{ list=await API.list(); }
+  catch(e){
+    if(e&&e.auth){ onAuthFail(); return; }
+    app.innerHTML=`<div class="fade-in"><div class="empty">서버에 연결하지 못했습니다.<br>잠시 후 다시 시도해 주세요.</div>
+      <div class="row-actions"><button class="btn btn-ghost btn-block" onclick="go('admin-list')">다시 시도</button></div></div>`;
+    return;
+  }
+  list.sort((a,b)=>b.createdAt-a.createdAt);
+  const signed=list.filter(d=>d.status==='signed').length;
+  let rows;
+  if(list.length===0){
+    rows=`<div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+      <div>아직 만든 서류가 없습니다.</div>
+      <div style="font-size:14px;margin-top:4px;">아래 버튼으로 첫 서류를 만들어 보세요.</div></div>`;
+  } else {
+    rows='<div class="doc-list">'+list.map(d=>`
+      <div class="doc-row">
+        <button class="doc-tap" onclick="go('admin-detail',{docId:'${d.id}'})">
+          <div class="doc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+          <div class="doc-main">
+            <b>${esc(d.applicant&&d.applicant.trim()?d.applicant:'이름 미입력')}</b>
+            <span>${esc(tplName(d.templateId))} · ${d.status==='signed'?'서명완료 '+fmtDT(d.signedAt):'대기 · '+fmtDT(d.createdAt)}</span>
+          </div>
+        </button>
+        <span class="badge ${d.status==='signed'?'badge-ok':'badge-wait'}">${d.status==='signed'?'완료':'대기'}</span>
+        <button class="copy-mini" title="이 서류 복사" onclick="event.stopPropagation();go('admin-fill',{fillMode:'copy',srcDocId:'${d.id}'})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>`).join('')+'</div>';
+  }
+  app.innerHTML=`
+  <div class="fade-in">
+    <div class="list-top">
+      <button class="back-link" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>처음으로</button>
+      <button class="logout-link" onclick="adminLogout()">로그아웃</button>
+    </div>
+    <div class="sec-head"><h2>서류 관리</h2><div class="sub">전체 ${list.length}건 · 완료 ${signed}건 · 대기 ${list.length-signed}건</div></div>
+    ${rows}
+    ${list.length?`<div class="help-row" style="margin-top:14px;">오른쪽 <b>복사</b> 버튼을 누르면 그 서류를 복제해 항목만 바꿔 새로 보낼 수 있습니다.</div>`:''}
+    <div class="row-actions">
+      <button class="btn btn-primary btn-big btn-block" onclick="go('admin-pick')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        새 서류 만들기
+      </button>
+    </div>
+  </div>`;
+}
+
+/* ---- ADMIN: 양식 선택 ---- */
+function renderAdminPick(){
+  const cards=Object.keys(TEMPLATES).map(id=>{
+    const t=TEMPLATES[id];
+    return `<div class="role-card" onclick="go('admin-fill',{fillMode:'new',tplId:'${id}',srcDocId:null})">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h5M9 17h5"/></svg></div>
+      <div><h3 style="font-size:18px;">${esc(t.name)}</h3><p>${esc(t.desc)}</p></div>
+      <div class="chev"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>`;
+  }).join('');
+  app.innerHTML=`
+  <div class="fade-in">
+    <button class="back-link" onclick="go('admin-list')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>서류 목록</button>
+    <div class="sec-head"><h2>양식 선택</h2><div class="sub">사용할 서류 양식을 골라 주세요.</div></div>
+    <div class="role-stack">${cards}</div>
+    <div class="help-row">필요한 양식이 없으면 개발자가 새 양식을 추가할 수 있습니다.</div>
+  </div>`;
+}
+
+/* ---- ADMIN: 항목 입력 (new / edit / copy) ---- */
+async function renderAdminFill(){
+  app.innerHTML=LOADING;
+  const mode=state.fillMode||'new';
+  let tplId, values={}, srcDoc=null;
+
+  if(mode==='edit'||mode==='copy'){
+    try{ srcDoc=await API.get(state.srcDocId); }
+    catch(e){ toast('서버에 연결하지 못했습니다.'); go('admin-list'); return; }
+    if(!srcDoc){ toast('원본 서류를 찾을 수 없습니다.'); go('admin-list'); return; }
+    if(mode==='edit' && srcDoc.status==='signed'){
+      toast('서명된 서류는 수정할 수 없습니다. 복사해서 새로 만들어 주세요.');
+      go('admin-detail',{docId:srcDoc.id}); return;
+    }
+    tplId=srcDoc.templateId;
+  } else {
+    tplId=state.tplId;
+  }
+  const t=TEMPLATES[tplId];
+  if(!t){ go('admin-pick'); return; }
+
+  const src=(srcDoc&&srcDoc.values)||{};
+  for(const f of t.fields){
+    if(mode==='edit')      values[f.key]= src[f.key]!=null ? src[f.key] : '';
+    else if(mode==='copy') values[f.key]= (f.type==='date') ? todayISO() : (src[f.key]!=null?src[f.key]:'');
+    else                   values[f.key]= (f.type==='date') ? todayISO() : '';
+  }
+  state._fillTpl=tplId;
+
+  const fieldsHTML=t.fields.map(f=>{
+    const cur=values[f.key]||'';
+    if(f.type==='radio'){
+      return `<div class="field"><label>${esc(f.label)}</label>
+        <div class="radio-group" data-key="${f.key}">
+          ${f.options.map(o=>`<button type="button" class="radio-opt ${o===cur?'on':''}" data-val="${esc(o)}" onclick="pickRadio(this)">${esc(o)}</button>`).join('')}
+        </div></div>`;
+    }
+    const itype=f.type==='date'?'date':(f.type==='tel'?'tel':'text');
+    return `<div class="field"><label>${esc(f.label)}</label>
+      <input type="${itype}" id="fld-${f.key}" value="${esc(cur)}" ${f.type==='date'?'':'maxlength="120"'} /></div>`;
+  }).join('');
+
+  const titleMap={ new:'새 서류 만들기', edit:'서류 수정', copy:'서류 복사' };
+  const subMap={
+    new:'필요한 항목만 채우면 됩니다. 빈 칸이 있어도 만들 수 있습니다.',
+    edit:'내용을 고친 뒤 저장하세요. 이미 보낸 링크는 그대로 사용됩니다.',
+    copy:'복사된 내용입니다. 바뀌는 항목만 고치고 새로 만드세요.'
+  };
+  const saveLabel={ new:'서류 만들기', edit:'수정 저장', copy:'복사해서 만들기' };
+  const backCall = mode==='new' ? "go('admin-pick')"
+                 : mode==='edit' ? `go('admin-detail',{docId:'${state.srcDocId}'})`
+                 : "go('admin-list')";
+
+  app.innerHTML=`
+  <div class="fade-in">
+    <button class="back-link" onclick="${backCall}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>뒤로</button>
+    <div class="sec-head"><h2>${titleMap[mode]}</h2><div class="sub">${esc(t.name)} · ${subMap[mode]}</div></div>
+    ${mode==='copy'?`<div class="notice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>기존 서류를 복사했습니다. 새 서류로 저장되며 새 링크가 생깁니다.</div>`:''}
+    <div class="panel">
+      ${fieldsHTML}
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="${backCall}">취소</button>
+        <button class="btn btn-primary" onclick="submitFill(this,'${mode}')">${saveLabel[mode]}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function pickRadio(btn){
+  const grp=btn.parentElement, was=btn.classList.contains('on');
+  grp.querySelectorAll('.radio-opt').forEach(b=>b.classList.remove('on'));
+  if(!was) btn.classList.add('on');
+}
+async function submitFill(btn,mode){
+  const tplId=state._fillTpl, t=TEMPLATES[tplId];
+  const values={};
+  for(const f of t.fields){
+    if(f.type==='radio'){
+      const on=document.querySelector(`.radio-group[data-key="${f.key}"] .radio-opt.on`);
+      values[f.key]=on?on.dataset.val:'';
+    } else {
+      values[f.key]=document.getElementById('fld-'+f.key).value.trim();
+    }
+  }
+  btn.disabled=true; btn.textContent='저장 중...';
+  try{
+    if(mode==='edit'){
+      const doc=await API.update(state.srcDocId,values);
+      toast('수정이 저장되었습니다.');
+      go('admin-detail',{docId:doc.id});
+    } else {
+      const doc=await API.create(tplId,values);
+      toast(mode==='copy'?'복사된 서류가 만들어졌습니다.':'서류가 만들어졌습니다.');
+      go('admin-detail',{docId:doc.id});
+    }
+  }catch(e){
+    btn.disabled=false; btn.textContent=mode==='edit'?'수정 저장':(mode==='copy'?'복사해서 만들기':'서류 만들기');
+    if(e&&e.auth){ onAuthFail(); return; }
+    if(e&&e.conflict){ toast('이미 서명된 서류는 수정할 수 없습니다.'); return; }
+    toast('저장에 실패했습니다. 다시 시도해 주세요.');
+  }
+}
+
+/* ---- ADMIN: 상세 ---- */
+async function renderAdminDetail(){
+  app.innerHTML=LOADING;
+  let doc;
+  try{ doc=await API.get(state.docId); }
+  catch(e){ app.innerHTML=`<div class="empty">서버에 연결하지 못했습니다.</div>`; return; }
+  if(!doc){ app.innerHTML=`<div class="empty">서류를 찾을 수 없습니다.</div>`; return; }
+  const signed=doc.status==='signed';
+  const link=signLink(doc.id);
+  app.innerHTML=`
+  <div class="fade-in">
+    <button class="back-link" onclick="go('admin-list')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>서류 목록</button>
+    ${ signed ? `
+    <div class="notice" style="background:var(--ok-soft);color:var(--ok);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+      ${esc(doc.signerName||'고객')}님이 ${fmtDT(doc.signedAt)}에 서명을 완료했습니다.
+    </div>` : `
+    <div class="share-box">
+      <div class="sb-label">고객에게 보낼 링크</div>
+      <div class="sb-title">이 링크를 보내세요</div>
+      <div class="sb-desc">고객은 링크를 누르기만 하면 됩니다. 코드 입력도, 앱 설치도, 가입도 없습니다. 카카오톡·문자 어디로든 보낼 수 있습니다.</div>
+      <div class="link-pill">${esc(link)}</div>
+      <div class="share-actions">
+        <button class="btn" onclick="shareLink('${doc.id}')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>보내기</button>
+        <button class="btn outline" onclick="copyLink('${doc.id}')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>링크 복사</button>
+      </div>
+    </div>` }
+    <div class="sec-head" style="margin-bottom:14px;">
+      <h2 style="font-size:21px;">${esc(tplName(doc.templateId))}</h2>
+      <div class="sub">${signed?'서명이 완료된 서류입니다.':'고객 서명을 기다리는 중입니다. (미리보기)'}</div>
+    </div>
+    ${tplPaper(doc,{signed:signed,signatureDataUrl:doc.signatureDataUrl})}
+    <div class="meta-grid">
+      <div class="meta-cell"><div class="k">신청자(소유자)</div><div class="v">${esc((doc.values&&doc.values.applicant)||'—')}</div></div>
+      <div class="meta-cell"><div class="k">만든 날짜</div><div class="v">${fmtDT(doc.createdAt)}</div></div>
+      <div class="meta-cell"><div class="k">서명 상태</div><div class="v">${signed?'서명완료':'대기'}</div></div>
+      <div class="meta-cell"><div class="k">서명일시</div><div class="v">${signed?fmtDT(doc.signedAt):'—'}</div></div>
+    </div>
+    <div class="row-actions">
+      ${ signed
+        ? `<button class="btn btn-primary btn-big btn-block" id="dl-btn" onclick="downloadPDF('${doc.id}')">
+             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+             서명된 서류 PDF 다운로드</button>`
+        : `<button class="btn btn-ghost btn-block" onclick="go('admin-fill',{fillMode:'edit',srcDocId:'${doc.id}'})">
+             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+             서류 수정</button>` }
+      <button class="btn btn-ghost btn-block" onclick="go('admin-fill',{fillMode:'copy',srcDocId:'${doc.id}'})">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        이 서류 복사해서 새로 만들기
+      </button>
+      <button class="btn btn-ghost btn-block" onclick="deleteDoc('${doc.id}')">서류 삭제</button>
+    </div>
+  </div>`;
+}
+async function shareLink(id){
+  const url=signLink(id);
+  if(navigator.share){ try{ await navigator.share({title:'서류 서명', text:'서명 요청드립니다. 아래 링크를 누르신 후 서명해 주세요.', url}); }catch(e){} }
+  else copyLink(id);
+}
+function copyLink(id){
+  const url=signLink(id);
+  if(navigator.clipboard)
+    navigator.clipboard.writeText(url).then(()=>toast('링크가 복사되었습니다.'),()=>toast('복사 실패 — 링크를 길게 눌러 복사하세요.'));
+  else toast('링크를 길게 눌러 복사하세요.');
+}
+async function deleteDoc(id){
+  if(!confirm('이 서류를 삭제할까요? 되돌릴 수 없습니다.')) return;
+  try{ await API.remove(id); toast('서류가 삭제되었습니다.'); go('admin-list'); }
+  catch(e){ if(e&&e.auth){ onAuthFail(); return; } toast('삭제에 실패했습니다.'); }
+}
+
+/* ===================== 고객 (어르신) ===================== */
+function renderCustomerBad(){
+  app.innerHTML=`
+  <div class="fade-in done-screen">
+    <div class="done-mark" style="background:var(--wait-soft);color:var(--wait);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+    </div>
+    <h2>서류를 열 수 없습니다</h2>
+    <p>링크가 올바르지 않거나 서류가 삭제되었을 수 있습니다.<br>보내주신 분께 다시 문의해 주세요.</p>
+  </div>`;
+}
+async function renderCustomerDoc(){
+  app.innerHTML=`<div class="loading"><div class="spin"></div>서류를 불러오는 중...</div>`;
+  let doc;
+  try{ doc=await API.get(state.docId); }
+  catch(e){
+    app.innerHTML=`<div class="fade-in done-screen">
+      <div class="done-mark" style="background:var(--wait-soft);color:var(--wait);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg></div>
+      <h2>잠시 연결이 어렵습니다</h2><p>인터넷 상태를 확인하시고 다시 시도해 주세요.</p>
+      <div style="margin-top:22px;"><button class="btn btn-primary" onclick="renderCustomerDoc()">다시 시도</button></div>
+    </div>`;
+    return;
+  }
+  if(!doc){ go('customer-bad'); return; }
+
+  if(doc.status==='signed'){
+    app.innerHTML=`
+    <div class="fade-in">
+      <div class="notice" style="background:var(--ok-soft);color:var(--ok);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+        이 서류는 ${esc(doc.signerName||'')}님이 ${fmtDT(doc.signedAt)}에 서명을 완료했습니다.
+      </div>
+      ${tplPaper(doc,{signed:true,signatureDataUrl:doc.signatureDataUrl})}
+      <div class="help-row" style="margin-top:24px;">서명이 이미 끝난 서류입니다. 추가로 하실 일은 없습니다.</div>
+    </div>`;
+    return;
+  }
+
+  app.innerHTML=`
+  <div class="fade-in">
+    <div class="step-banner"><div class="stepnum">1</div><div>아래 신청서 내용을 확인해 주세요.</div></div>
+    ${tplPaper(doc,{signed:false})}
+    <div class="scroll-hint">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+      아래로 내려서 서명해 주세요
+    </div>
+    <div class="panel" style="margin-top:8px;">
+      <div class="step-banner" style="margin-bottom:18px;"><div class="stepnum">2</div><div>아래 칸에 서명해 주세요.</div></div>
+      <div class="consent-line">아래 칸에 서명하시면, 위 신청서 내용을 모두 확인하고 동의하신 것으로 처리됩니다.</div>
+      <div class="field">
+        <label>서명 <span class="hint">— 손가락으로 아래 칸에 서명하세요.</span></label>
+        <div class="pad-shell">
+          <canvas id="pad" class="pad-canvas"></canvas>
+          <div class="pad-bar">
+            <span>네모 칸 안에 서명</span>
+            <button class="pad-clear" onclick="pad && pad.clear()">다시 쓰기</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-big btn-block" onclick="submitSignature('${doc.id}',this)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        서명 완료
+      </button>
+    </div>
+  </div>`;
+  pad=new SignaturePad(document.getElementById('pad'));
+}
+
+class SignaturePad{
+  constructor(canvas){
+    this.c=canvas; this.ctx=canvas.getContext('2d'); this.drawing=false; this.empty=true;
+    this._resize(); this._bind();
+    window.addEventListener('resize',()=>this._resize());
+  }
+  _resize(){
+    const ratio=window.devicePixelRatio||1, rect=this.c.getBoundingClientRect();
+    if(rect.width===0) return;
+    const data=this.empty?null:this.c.toDataURL();
+    this.c.width=rect.width*ratio; this.c.height=rect.height*ratio;
+    this.ctx.setTransform(ratio,0,0,ratio,0,0);
+    this.ctx.lineWidth=3.2; this.ctx.lineCap='round'; this.ctx.lineJoin='round'; this.ctx.strokeStyle='#1c2330';
+    if(data){ const img=new Image(); img.onload=()=>this.ctx.drawImage(img,0,0,rect.width,rect.height); img.src=data; }
+  }
+  _pos(e){ const r=this.c.getBoundingClientRect(),t=e.touches?e.touches[0]:e; return {x:t.clientX-r.left,y:t.clientY-r.top}; }
+  _bind(){
+    const start=e=>{ e.preventDefault(); this.drawing=true; const p=this._pos(e);
+      this.ctx.beginPath(); this.ctx.moveTo(p.x,p.y); this.ctx.lineTo(p.x+0.1,p.y+0.1); this.ctx.stroke(); this.empty=false; };
+    const move=e=>{ if(!this.drawing) return; e.preventDefault(); const p=this._pos(e);
+      this.ctx.lineTo(p.x,p.y); this.ctx.stroke(); };
+    const end=()=>{ this.drawing=false; };
+    this.c.addEventListener('pointerdown',start);
+    this.c.addEventListener('pointermove',move);
+    this.c.addEventListener('pointerup',end);
+    this.c.addEventListener('pointerleave',end);
+    this.c.addEventListener('pointercancel',end);
+  }
+  clear(){ this.ctx.clearRect(0,0,this.c.width,this.c.height); this.empty=true; }
+  isEmpty(){ return this.empty; }
+  dataURL(){ return this.c.toDataURL('image/png'); }
+}
+
+async function submitSignature(id,btn){
+  if(pad.isEmpty()){ toast('서명 칸에 서명해 주세요.'); return; }
+  btn.disabled=true; btn.textContent='제출 중...';
+  try{
+    await API.sign(id,'',pad.dataURL());
+    go('customer-done',{docId:id});
+  }catch(e){
+    if(e&&e.signed){ toast('이미 서명이 완료된 서류입니다.'); go('customer-doc',{docId:id}); return; }
+    btn.disabled=false;
+    btn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 서명 완료';
+    toast('제출에 실패했습니다. 다시 시도해 주세요.');
+  }
+}
+
+async function renderCustomerDone(){
+  app.innerHTML=`
+  <div class="fade-in done-screen">
+    <div class="done-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+    <h2>서명이 끝났습니다</h2>
+    <p>신청서에 서명이 잘 제출되었습니다.<br>이제 창을 닫으셔도 됩니다. 수고하셨습니다.</p>
+  </div>`;
+}
+
+/* ===================== PDF ===================== */
+async function downloadPDF(id){
+  const btn=document.getElementById('dl-btn');
+  if(btn){ btn.disabled=true; btn.innerHTML='PDF 만드는 중...'; }
+  try{
+    const doc=await API.get(id);
+    if(!doc){ toast('서류를 찾을 수 없습니다.'); return; }
+    const stage=document.getElementById('pdf-stage');
+    stage.innerHTML=`<div style="padding:10px 14px;">${tplPaper(doc,{signed:doc.status==='signed',signatureDataUrl:doc.signatureDataUrl})}</div>`;
+    const paper=stage.querySelector('.paper');
+    if(paper){ paper.style.boxShadow='none'; paper.style.border='none'; }
+    if(document.fonts&&document.fonts.ready) await document.fonts.ready;
+    await new Promise(r=>setTimeout(r,160));
+    const canvas=await html2canvas(stage,{scale:2,backgroundColor:'#ffffff',useCORS:true});
+    const { jsPDF }=window.jspdf;
+    const pdf=new jsPDF('p','mm','a4');
+    const pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
+    const imgW=pageW, imgH=canvas.height*imgW/canvas.width;
+    const imgData=canvas.toDataURL('image/png');
+    let heightLeft=imgH, position=0;
+    pdf.addImage(imgData,'PNG',0,position,imgW,imgH); heightLeft-=pageH;
+    while(heightLeft>0){ position-=pageH; pdf.addPage(); pdf.addImage(imgData,'PNG',0,position,imgW,imgH); heightLeft-=pageH; }
+    const who=((doc.values&&doc.values.applicant)||'신청자').replace(/[\\/:*?"<>|]/g,'_');
+    pdf.save(`${tplName(doc.templateId)}_${who}_서명완료.pdf`);
+    stage.innerHTML='';
+    toast('PDF가 다운로드되었습니다.');
+  }catch(e){
+    console.error(e); toast('PDF 만들기 중 오류가 발생했습니다.');
+  }finally{
+    if(btn){ btn.disabled=false;
+      btn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> 서명된 서류 PDF 다운로드'; }
+  }
+}
+
+/* ===================== 시작 ===================== */
+function detectCustomerId(){
+  const pm=location.pathname.match(/^\/s(?:ign)?\/([a-z0-9]+)\/?$/i);
+  if(pm) return pm[1];
+  const hm=(location.hash||'').replace(/^#/,'').match(/^sign=([a-z0-9]+)$/i);
+  if(hm) return hm[1];
+  return null;
+}
+(function init(){
+  const cid=detectCustomerId();
+  if(cid){ state.view='customer-doc'; state.docId=cid; setTopbar(); render(); }
+  else render();
+})();
+</script>
+</body>
+</html>

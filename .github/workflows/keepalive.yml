@@ -1,0 +1,18 @@
+name: keepalive
+
+# Supabase 무료 플랜은 1주일간 활동이 없으면 프로젝트를 일시정지(pause) 합니다.
+# 매일 1회 /api/health 를 호출해 데이터베이스 활동을 유지합니다.
+# (Vercel 배포가 완료된 이후, GitHub repo secrets 에 NALIN_DOMAIN 을 등록해 주세요.)
+
+on:
+  schedule:
+    - cron: '17 4 * * *'   # 매일 04:17 UTC = 한국시간 13:17
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          curl -fsS --max-time 30 "https://${{ secrets.NALIN_DOMAIN }}/api/health"

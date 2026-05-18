@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "PowerShell($paths = @\\(\"$env:ProgramFiles\\\\nodejs\\\\node.exe\", \"${env:ProgramFiles\\(x86\\)}\\\\nodejs\\\\node.exe\", \"$env:LOCALAPPDATA\\\\Programs\\\\nodejs\\\\node.exe\", \"$env:APPDATA\\\\nvm\\\\node.exe\"\\); foreach \\($p in $paths\\) { if \\(Test-Path $p\\) { Write-Output \"FOUND: $p\" } }; Get-ChildItem \"$env:APPDATA\\\\nvm\" -ErrorAction SilentlyContinue | Select-Object -First 20)",
+      "PowerShell($found = @\\(\\); Get-ChildItem -Path \"C:\\\\\",\"$env:USERPROFILE\" -Filter \"node.exe\" -Recurse -ErrorAction SilentlyContinue -Depth 4 | ForEach-Object { $found += $_.FullName }; if \\($found.Count -eq 0\\) { Write-Output \"node.exe not found in scanned locations\" } else { $found })",
+      "PowerShell($nodePath = \"$env:ProgramFiles\\\\nodejs\"; if \\(Test-Path \"$nodePath\\\\node.exe\"\\) { $env:Path = \"$nodePath;$env:Path\"; node --version; npm --version } else { Write-Output \"node.exe not at expected path\"; Get-ChildItem \"$env:ProgramFiles\\\\nodejs\" -ErrorAction SilentlyContinue })",
+      "PowerShell($env:Path = \"$env:ProgramFiles\\\\nodejs;$env:Path\"; & \"$env:ProgramFiles\\\\nodejs\\\\npm.cmd\" install --prefix C:\\\\source\\\\nalin-server)"
+    ]
+  }
+}
