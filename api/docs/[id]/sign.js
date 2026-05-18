@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
     .select('id,status,values')
     .eq('id', id)
     .maybeSingle();
-  if (readErr) return res.status(500).json({ error: 'db' });
+  if (readErr) { console.error('[sign] read db error', readErr); return res.status(500).json({ error: 'db', detail: readErr.message, code: readErr.code, hint: readErr.hint }); }
   if (!existing) return res.status(404).json({ error: 'not found' });
   if (existing.status === 'signed') return res.status(409).json({ error: 'already signed' });
 
@@ -43,6 +43,6 @@ module.exports = async (req, res) => {
     .select('id,template_id,values,status,signer_name,signature_path,created_at,signed_at')
     .single();
 
-  if (error) return res.status(500).json({ error: 'db' });
+  if (error) { console.error('[sign] update db error', error); return res.status(500).json({ error: 'db', detail: error.message, code: error.code, hint: error.hint }); }
   return res.json(reshape(data, { includeSignature: true }));
 };

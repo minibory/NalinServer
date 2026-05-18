@@ -12,7 +12,7 @@ module.exports = async (req, res) => {
       .select('id,template_id,values,status,signer_name,signature_path,created_at,signed_at')
       .eq('id', id)
       .maybeSingle();
-    if (error) return res.status(500).json({ error: 'db' });
+    if (error) { console.error('[doc] db error', error); return res.status(500).json({ error: 'db', detail: error.message, code: error.code, hint: error.hint }); }
     if (!data) return res.status(404).json({ error: 'not found' });
     return res.json(reshape(data, { includeSignature: true }));
   }
@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
     const { values } = readJson(req);
     const { data: existing, error: readErr } = await sb.from('docs')
       .select('status').eq('id', id).maybeSingle();
-    if (readErr) return res.status(500).json({ error: 'db' });
+    if (readErr) { console.error('[doc] db error', readErr); return res.status(500).json({ error: 'db', detail: readErr.message, code: readErr.code, hint: readErr.hint }); }
     if (!existing) return res.status(404).json({ error: 'not found' });
     if (existing.status === 'signed') return res.status(409).json({ error: 'already signed' });
 
@@ -32,7 +32,7 @@ module.exports = async (req, res) => {
       .eq('status', 'pending')
       .select('id,template_id,values,status,signer_name,signature_path,created_at,signed_at')
       .single();
-    if (error) return res.status(500).json({ error: 'db' });
+    if (error) { console.error('[doc] db error', error); return res.status(500).json({ error: 'db', detail: error.message, code: error.code, hint: error.hint }); }
     return res.json(reshape(data, { includeSignature: true }));
   }
 
@@ -40,7 +40,7 @@ module.exports = async (req, res) => {
     if (!verify(req)) return res.status(401).json({ error: 'unauthorized' });
     await sb.storage.from(BUCKET).remove([`${id}.png`]).catch(() => {});
     const { error } = await sb.from('docs').delete().eq('id', id);
-    if (error) return res.status(500).json({ error: 'db' });
+    if (error) { console.error('[doc] db error', error); return res.status(500).json({ error: 'db', detail: error.message, code: error.code, hint: error.hint }); }
     return res.json({ ok: true });
   }
 

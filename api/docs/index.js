@@ -11,7 +11,7 @@ module.exports = async (req, res) => {
       .from('docs')
       .select('id,template_id,values,status,signer_name,created_at,signed_at')
       .order('created_at', { ascending: false });
-    if (error) return res.status(500).json({ error: 'db' });
+    if (error) { console.error('[docs] db error', error); return res.status(500).json({ error: 'db', detail: error.message, code: error.code, hint: error.hint }); }
     return res.json(data.map(r => reshape(r, { includeSignature: false })));
   }
 
@@ -24,7 +24,7 @@ module.exports = async (req, res) => {
       const { count, error } = await sb.from('docs')
         .select('id', { count: 'exact', head: true })
         .eq('id', candidate);
-      if (error) return res.status(500).json({ error: 'db' });
+      if (error) { console.error('[docs] db error', error); return res.status(500).json({ error: 'db', detail: error.message, code: error.code, hint: error.hint }); }
       if ((count || 0) === 0) { id = candidate; break; }
     }
     if (!id) return res.status(500).json({ error: 'id collision' });
@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
       .insert({ id, template_id: templateId, values: values || {} })
       .select('id,template_id,values,status,signer_name,created_at,signed_at')
       .single();
-    if (error) return res.status(500).json({ error: 'db' });
+    if (error) { console.error('[docs] db error', error); return res.status(500).json({ error: 'db', detail: error.message, code: error.code, hint: error.hint }); }
     return res.json(reshape(data, { includeSignature: false }));
   }
 
