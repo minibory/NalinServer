@@ -4,7 +4,7 @@
   "private": true,
   "description": "날인 - 서류 서명 시스템 (Vercel + Supabase)",
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
